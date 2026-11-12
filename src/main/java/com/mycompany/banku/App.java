@@ -1,406 +1,570 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package com.mycompany.banku;
 
+import javafx.scene.control.Label;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.function.Function;
+import javafx.application.Application;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
-public class App {
-    static Scanner sc = new Scanner(System.in);
-    static ArrayList<Pengguna> daftarPengguna = new ArrayList<>();
-    static Sampah[] katalog = { new Plastik(), new Kertas(), new Logam(), new Kaca() };
+/**
+ *
+ * @author ragil
+ */
+public class App extends Application {
 
-    // barang kebutuhan pokok yang bisa ditukar
-    static String[] namaBarang = { "Beras 1 kg", "Minyak goreng 1 liter", "Gula 1 kg" };
-    static double[] hargaBarang = { 14000, 18000, 17000 };
+    private static final String EDUKASI =
+        "Plastik : bilas dulu, buang tutup dan label kalau bisa.\n"
+      + "Kertas  : jaga tetap kering, kertas basah atau berminyak tidak laku.\n"
+      + "Logam   : kaleng dipipihkan biar hemat tempat.\n"
+      + "Kaca    : bungkus pecahan, tukang sampah juga punya tangan.\n"
+      + "Sisa makanan jangan dicampur, itu urusan kompos.";
 
-    static final String KODE_PETUGAS = "BANKU2026";
+    private Stage stage;
 
     public static void main(String[] args) {
-        // akun petugas bawaan biar bisa langsung dicoba
-        daftarPengguna.add(new Petugas("admin", "Petugas Utama", "admin123", "PTG-001"));
-
-        boolean jalan = true;
-        while (jalan) {
-            garis();
-            System.out.println("   BANKU - Bank Sampah Digital");
-            garis();
-            System.out.println("1. Login");
-            System.out.println("2. Registrasi");
-            System.out.println("3. Informasi edukasi");
-            System.out.println("0. Keluar");
-            int pilih = bacaInt("Pilih menu: ");
-
-            switch (pilih) {
-                case 1: login(); break;
-                case 2: registrasi(); break;
-                case 3: tampilEdukasi(); break;
-                case 0:
-                    jalan = false;
-                    System.out.println("Terima kasih, jangan lupa pilah sampahmu.");
-                    break;
-                default: System.out.println("Menu tidak ada."); 
-            }
-        }
+        launch(args);
     }
 
-    // ---------- LOGIN & REGISTRASI ----------
-    static Pengguna cariPengguna(String username) {
-        for (Pengguna p : daftarPengguna) {
-            if (p.getUsername().equalsIgnoreCase(username)) {
-                return p;
-            }
-        }
-        return null;
+    @Override
+    public void start(Stage primaryStage) {
+        stage = primaryStage;
+        stage.setTitle("BanKu - Bank Sampah Digital");
+        tampilLogin();
+        stage.show();
     }
 
-    static void registrasi() {
-        System.out.println("\n--- Registrasi ---");
-        System.out.println("1. Nasabah");
-        System.out.println("2. Petugas (butuh kode)");
-        int jenis = bacaInt("Daftar sebagai: ");
-        if (jenis != 1 && jenis != 2) {
-            System.out.println("Pilihan tidak valid.");
-            return;
-        }
+    // ================= HELPER UMUM =================
 
-        String username = bacaTeks("Username: ");
-        if (username.isEmpty() || cariPengguna(username) != null) {
-            System.out.println("Username kosong atau sudah dipakai.");
-            return;
-        }
-        String nama = bacaTeks("Nama lengkap: ");
-        String pass = bacaTeks("Password (min 4 karakter): ");
-        if (pass.length() < 4) {
-            System.out.println("Password terlalu pendek.");
-            return;
-        }
-
-        if (jenis == 1) {
-            daftarPengguna.add(new Nasabah(username, nama, pass));
-            System.out.println("Registrasi nasabah berhasil.");
-        } else {
-            String kode = bacaTeks("Kode petugas: ");
-            if (!kode.equals(KODE_PETUGAS)) {
-                System.out.println("Kode salah, pendaftaran dibatalkan.");
-                return;
-            }
-            String id = "PTG-" + String.format("%03d", jumlahPetugas() + 1);
-            daftarPengguna.add(new Petugas(username, nama, pass, id));
-            System.out.println("Registrasi petugas berhasil dengan ID " + id + ".");
-        }
+    private void tampil(Parent root, double lebar, double tinggi) {
+        stage.setScene(new Scene(root, lebar, tinggi));
+        stage.centerOnScreen();
     }
 
-    static int jumlahPetugas() {
-        int n = 0;
-        for (Pengguna p : daftarPengguna) {
-            if (p instanceof Petugas) n++;
-        }
-        return n;
+    private void alert(Alert.AlertType tipe, String judul, String pesan) {
+        Alert a = new Alert(tipe);
+        a.setTitle("BanKu");
+        a.setHeaderText(judul);
+        a.setContentText(pesan);
+        a.showAndWait();
     }
 
-    static void login() {
-        System.out.println("\n--- Login ---");
-        String username = bacaTeks("Username: ");
-        String pass = bacaTeks("Password: ");
-
-        Pengguna p = cariPengguna(username);
-        if (p == null || !p.cekPassword(pass)) {
-            System.out.println("Username atau password salah.");
-            return;
-        }
-
-        System.out.println("Halo, " + p.getNama() + " (" + p.getPeran() + ")");
-        if (p instanceof Petugas) {
-            menuPetugas((Petugas) p);
-        } else {
-            menuNasabah((Nasabah) p);
-        }
-    }
-
-    // ---------- MENU PETUGAS ----------
-    static void menuPetugas(Petugas petugas) {
-        boolean aktif = true;
-        while (aktif) {
-            garis();
-            System.out.println("MENU PETUGAS [" + petugas.getIdPetugas() + "]");
-            System.out.println("1. Catat setoran sampah");
-            System.out.println("2. Proses penukaran saldo nasabah");
-            System.out.println("3. Lihat daftar nasabah");
-            System.out.println("4. Laporan rekapitulasi");
-            System.out.println("5. Lihat daftar harga");
-            System.out.println("0. Logout");
-            int pilih = bacaInt("Pilih menu: ");
-
-            switch (pilih) {
-                case 1: catatSetoran(); break;
-                case 2: prosesPenukaran(); break;
-                case 3: daftarNasabah(); break;
-                case 4: laporanRekap(); break;
-                case 5: tampilHarga(); break;
-                case 0: aktif = false; break;
-                default: System.out.println("Menu tidak ada.");
-            }
-        }
-    }
-
-    static Nasabah pilihNasabah() {
-        String user = bacaTeks("Username nasabah: ");
-        Pengguna p = cariPengguna(user);
-        if (p instanceof Nasabah) {
-            return (Nasabah) p;
-        }
-        System.out.println("Nasabah tidak ditemukan.");
-        return null;
-    }
-
-    static void catatSetoran() {
-        System.out.println("\n--- Catat Setoran ---");
-        Nasabah n = pilihNasabah();
-        if (n == null) return;
-
-        tampilHarga();
-        int idx = bacaInt("Pilih jenis sampah (nomor): ") - 1;
-        if (idx < 0 || idx >= katalog.length) {
-            System.out.println("Jenis sampah tidak valid.");
-            return;
-        }
-        double berat = bacaDouble("Berat (kg): ");
-        if (berat <= 0) {
-            System.out.println("Berat harus lebih dari nol.");
-            return;
-        }
-
-        Sampah s = katalog[idx];
-        double nilai = s.hitungNilai(berat); // method polymorphic
-        n.tambahSaldo(nilai);
-        n.catat(new Transaksi(LocalDate.now(), "SETOR", s.getJenis(), berat, nilai));
-
-        System.out.printf("Setoran %.2f kg %s dicatat. Nilai: %s%n",
-                berat, s.getJenis(), rupiah(nilai));
-        System.out.println("Saldo " + n.getNama() + " sekarang: " + rupiah(n.getSaldo()));
-    }
-
-    static void prosesPenukaran() {
-        System.out.println("\n--- Penukaran Saldo ---");
-        Nasabah n = pilihNasabah();
-        if (n == null) return;
-        lakukanPenukaran(n);
-    }
-
-    static void daftarNasabah() {
-        System.out.println("\n--- Daftar Nasabah ---");
-        int no = 0;
-        for (Pengguna p : daftarPengguna) {
-            if (p instanceof Nasabah) {
-                Nasabah n = (Nasabah) p;
-                no++;
-                System.out.printf("%d. %s (%s) | saldo %s%n",
-                        no, n.getNama(), n.getUsername(), rupiah(n.getSaldo()));
-            }
-        }
-        if (no == 0) System.out.println("Belum ada nasabah.");
-    }
-
-    static void laporanRekap() {
-        System.out.println("\n--- Laporan Rekapitulasi ---");
-        System.out.println("1. Semua periode");
-        System.out.println("2. Per periode (rentang tanggal)");
-        int mode = bacaInt("Pilih: ");
-
-        LocalDate awal = LocalDate.MIN;
-        LocalDate akhir = LocalDate.MAX;
-        if (mode == 2) {
-            awal = bacaTanggal("Dari tanggal (yyyy-mm-dd): ");
-            akhir = bacaTanggal("Sampai tanggal (yyyy-mm-dd): ");
-            if (awal == null || akhir == null) {
-                System.out.println("Format tanggal salah.");
-                return;
-            }
-        }
-
-        double[] totalBerat = new double[katalog.length];
-        double[] totalNilai = new double[katalog.length];
-        for (Pengguna p : daftarPengguna) {
-            if (!(p instanceof Nasabah)) continue;
-            for (Transaksi t : ((Nasabah) p).getRiwayat()) {
-                if (!t.getTipe().equals("SETOR")) continue;
-                if (t.getTanggal().isBefore(awal) || t.getTanggal().isAfter(akhir)) continue;
-                for (int i = 0; i < katalog.length; i++) {
-                    if (katalog[i].getJenis().equals(t.getKeterangan())) {
-                        totalBerat[i] += t.getBeratKg();
-                        totalNilai[i] += t.getNominal();
-                    }
-                }
-            }
-        }
-
-        double sumBerat = 0, sumNilai = 0;
-        System.out.printf("%-10s %12s %16s%n", "Jenis", "Berat (kg)", "Nilai");
-        for (int i = 0; i < katalog.length; i++) {
-            System.out.printf("%-10s %12.2f %16s%n",
-                    katalog[i].getJenis(), totalBerat[i], rupiah(totalNilai[i]));
-            sumBerat += totalBerat[i];
-            sumNilai += totalNilai[i];
-        }
-        System.out.printf("%-10s %12.2f %16s%n", "TOTAL", sumBerat, rupiah(sumNilai));
-    }
-
-    // ---------- MENU NASABAH ----------
-    static void menuNasabah(Nasabah n) {
-        boolean aktif = true;
-        while (aktif) {
-            garis();
-            System.out.println("MENU NASABAH - " + n.getNama());
-            System.out.println("1. Lihat saldo");
-            System.out.println("2. Tukar saldo");
-            System.out.println("3. Riwayat transaksi");
-            System.out.println("4. Daftar harga sampah");
-            System.out.println("5. Informasi edukasi");
-            System.out.println("6. Ganti password");
-            System.out.println("0. Logout");
-            int pilih = bacaInt("Pilih menu: ");
-
-            switch (pilih) {
-                case 1:
-                    System.out.println("Saldo kamu: " + rupiah(n.getSaldo()));
-                    break;
-                case 2: lakukanPenukaran(n); break;
-                case 3: tampilRiwayat(n); break;
-                case 4: tampilHarga(); break;
-                case 5: tampilEdukasi(); break;
-                case 6:
-                    String lama = bacaTeks("Password lama: ");
-                    if (!n.cekPassword(lama)) {
-                        System.out.println("Password lama salah.");
-                        break;
-                    }
-                    String baru = bacaTeks("Password baru (min 4): ");
-                    if (baru.length() < 4) {
-                        System.out.println("Terlalu pendek, batal.");
-                    } else {
-                        n.setPassword(baru);
-                        System.out.println("Password berhasil diganti.");
-                    }
-                    break;
-                case 0: aktif = false; break;
-                default: System.out.println("Menu tidak ada.");
-            }
-        }
-    }
-
-    static void lakukanPenukaran(Nasabah n) {
-        System.out.println("Saldo " + n.getNama() + ": " + rupiah(n.getSaldo()));
-        System.out.println("1. Tarik tunai");
-        System.out.println("2. Tukar barang kebutuhan pokok");
-        int jenis = bacaInt("Pilih: ");
-
-        if (jenis == 1) {
-            double jumlah = bacaDouble("Jumlah penarikan: ");
-            if (jumlah <= 0) {
-                System.out.println("Jumlah tidak valid.");
-            } else if (n.kurangiSaldo(jumlah)) {
-                n.catat(new Transaksi(LocalDate.now(), "TARIK", "Tarik tunai", 0, jumlah));
-                System.out.println("Penarikan " + rupiah(jumlah) + " berhasil.");
-            } else {
-                System.out.println("Saldo tidak cukup.");
-            }
-        } else if (jenis == 2) {
-            for (int i = 0; i < namaBarang.length; i++) {
-                System.out.printf("%d. %s (%s)%n", i + 1, namaBarang[i], rupiah(hargaBarang[i]));
-            }
-            int idx = bacaInt("Pilih barang: ") - 1;
-            if (idx < 0 || idx >= namaBarang.length) {
-                System.out.println("Barang tidak valid.");
-                return;
-            }
-            if (n.kurangiSaldo(hargaBarang[idx])) {
-                n.catat(new Transaksi(LocalDate.now(), "TUKAR", namaBarang[idx], 0, hargaBarang[idx]));
-                System.out.println("Berhasil menukar " + namaBarang[idx] + ".");
-            } else {
-                System.out.println("Saldo belum cukup, setor lagi ya.");
-            }
-        } else {
-            System.out.println("Pilihan tidak valid.");
-        }
-    }
-
-    static void tampilRiwayat(Nasabah n) {
-        System.out.println("\n--- Riwayat Transaksi ---");
-        if (n.getRiwayat().isEmpty()) {
-            System.out.println("Belum ada transaksi.");
-            return;
-        }
-        for (Transaksi t : n.getRiwayat()) {
-            String berat = t.getBeratKg() > 0 ? String.format(" (%.2f kg)", t.getBeratKg()) : "";
-            String tanda = t.getTipe().equals("SETOR") ? "+" : "-";
-            System.out.printf("%s | %-5s | %s%s | %s%s%n",
-                    t.getTanggal(), t.getTipe(), t.getKeterangan(), berat,
-                    tanda, rupiah(t.getNominal()));
-        }
-    }
-
-    // ---------- TAMPILAN UMUM ----------
-    static void tampilHarga() {
-        System.out.println("\nDaftar jenis sampah:");
-        for (int i = 0; i < katalog.length; i++) {
-            System.out.printf("%d. %-8s %s/kg%n", i + 1,
-                    katalog[i].getJenis(), rupiah(katalog[i].getHargaPerKg()));
-        }
-    }
-
-    static void tampilEdukasi() {
-        System.out.println("\n--- Edukasi Memilah Sampah ---");
-        System.out.println("Plastik : bilas dulu, buang tutup dan label kalau bisa.");
-        System.out.println("Kertas  : jaga tetap kering, kertas basah atau berminyak tidak laku.");
-        System.out.println("Logam   : kaleng dipipihkan biar hemat tempat.");
-        System.out.println("Kaca    : bungkus pecahan, tukang sampah juga punya tangan.");
-        System.out.println("Sisa makanan jangan dicampur, itu urusan kompos.");
-    }
-
-    static void garis() {
-        System.out.println("\n==============================");
-    }
-
-    static String rupiah(double nilai) {
-        return String.format("Rp%,.0f", nilai).replace(',', '.');
-    }
-
-    // ---------- HELPER INPUT SCANNER ----------
-    static String bacaTeks(String pesan) {
-        System.out.print(pesan);
-        return sc.nextLine().trim();
-    }
-
-    static int bacaInt(String pesan) {
-        while (true) {
-            System.out.print(pesan);
-            String s = sc.nextLine().trim();
-            try {
-                return Integer.parseInt(s);
-            } catch (NumberFormatException e) {
-                System.out.println("Masukkan angka bulat saja.");
-            }
-        }
-    }
-
-    static double bacaDouble(String pesan) {
-        while (true) {
-            System.out.print(pesan);
-            String s = sc.nextLine().trim().replace(',', '.');
-            try {
-                return Double.parseDouble(s);
-            } catch (NumberFormatException e) {
-                System.out.println("Masukkan angka yang benar.");
-            }
-        }
-    }
-
-    static LocalDate bacaTanggal(String pesan) {
-        System.out.print(pesan);
+    // null kalau teks bukan angka (try-catch)
+    private Double parseAngka(String teks) {
         try {
-            return LocalDate.parse(sc.nextLine().trim());
-        } catch (Exception e) {
+            return Double.parseDouble(teks.trim().replace(',', '.'));
+        } catch (NumberFormatException ex) {
             return null;
         }
     }
+
+    private GridPane buatForm() {
+        GridPane g = new GridPane();
+        g.setHgap(10);
+        g.setVgap(10);
+        g.setPadding(new Insets(15));
+        return g;
+    }
+
+    private <T> TableColumn<T, String> kolom(String judul, Function<T, String> isi, double lebar) {
+        TableColumn<T, String> c = new TableColumn<>(judul);
+        c.setCellValueFactory(d -> new SimpleStringProperty(isi.apply(d.getValue())));
+        c.setPrefWidth(lebar);
+        return c;
+    }
+
+    private String teksHarga() {
+        StringBuilder sb = new StringBuilder("DAFTAR HARGA SAMPAH\n\n");
+        for (Sampah s : DataStore.katalog) {
+            sb.append(String.format("%-8s %s per kg%n", s.getJenis(), DataStore.rupiah(s.getHargaPerKg())));
+        }
+        sb.append("\nBONUS DAN POTONGAN\n");
+        sb.append("Plastik : bonus 10 persen untuk setoran 5 kg atau lebih\n");
+        sb.append("Logam   : bonus 5 persen untuk setoran 3 kg atau lebih\n");
+        sb.append("Kaca    : potongan penanganan Rp200 per setoran\n");
+        sb.append("\nBARANG YANG BISA DITUKAR\n");
+        for (int i = 0; i < DataStore.namaBarang.length; i++) {
+            sb.append(String.format("%-24s %s%n", DataStore.namaBarang[i], DataStore.rupiah(DataStore.hargaBarang[i])));
+        }
+        sb.append("\nEDUKASI MEMILAH SAMPAH\n\n").append(EDUKASI);
+        return sb.toString();
+    }
+
+    private TextArea buatPanelInfo() {
+        TextArea ta = new TextArea(teksHarga());
+        ta.setEditable(false);
+        ta.setStyle("-fx-font-family: 'Consolas', monospace;");
+        return ta;
+    }
+
+    // ================= LOGIN =================
+
+    private void tampilLogin() {
+        Label judul = new Label("BanKu");
+        judul.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;");
+        Label sub = new Label("Bank Sampah Digital");
+
+        TextField tfUser = new TextField();
+        tfUser.setPromptText("Username");
+        PasswordField pfPass = new PasswordField();
+        pfPass.setPromptText("Password");
+
+        GridPane form = buatForm();
+        form.setAlignment(Pos.CENTER);
+        form.add(new Label("Username"), 0, 0);
+        form.add(tfUser, 1, 0);
+        form.add(new Label("Password"), 0, 1);
+        form.add(pfPass, 1, 1);
+
+        Button btnLogin = new Button("Login");
+        btnLogin.setDefaultButton(true);
+        Button btnDaftar = new Button("Daftar Akun");
+        Button btnEdu = new Button("Edukasi");
+
+        btnLogin.setOnAction(e -> {
+            String user = tfUser.getText().trim();
+            String pass = pfPass.getText();
+
+            if (user.isEmpty() || pass.isEmpty()) {
+                alert(Alert.AlertType.WARNING, "Data belum lengkap", "Username dan password wajib diisi.");
+                return;
+            }
+            Pengguna p = DataStore.cariPengguna(user);
+            if (p == null || !p.cekPassword(pass)) {
+                alert(Alert.AlertType.ERROR, "Login gagal", "Username atau password salah.");
+                return;
+            }
+            if (p instanceof Petugas) {
+                tampilPetugas((Petugas) p);
+            } else {
+                tampilNasabah((Nasabah) p);
+            }
+        });
+        btnDaftar.setOnAction(e -> tampilRegistrasi());
+        btnEdu.setOnAction(e -> alert(Alert.AlertType.INFORMATION, "Edukasi Memilah Sampah", EDUKASI));
+
+        HBox tombol = new HBox(10, btnLogin, btnDaftar, btnEdu);
+        tombol.setAlignment(Pos.CENTER);
+
+        Label info = new Label("Akun petugas bawaan: admin / admin123");
+        info.setStyle("-fx-text-fill: gray;");
+
+        VBox root = new VBox(15, judul, sub, form, tombol, info);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(30));
+        tampil(root, 460, 400);
+    }
+
+    // ================= REGISTRASI =================
+
+    private void tampilRegistrasi() {
+        Label judul = new Label("Registrasi Akun");
+        judul.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
+
+        TextField tfUser = new TextField();
+        TextField tfNama = new TextField();
+        PasswordField pfPass = new PasswordField();
+        ComboBox<String> cbPeran = new ComboBox<>(FXCollections.observableArrayList("Nasabah", "Petugas"));
+        cbPeran.setValue("Nasabah");
+        PasswordField pfKode = new PasswordField();
+        pfKode.setPromptText("Khusus petugas");
+        pfKode.setDisable(true);
+        cbPeran.setOnAction(e -> pfKode.setDisable(!"Petugas".equals(cbPeran.getValue())));
+
+        GridPane form = buatForm();
+        form.setAlignment(Pos.CENTER);
+        form.add(new Label("Daftar sebagai"), 0, 0);
+        form.add(cbPeran, 1, 0);
+        form.add(new Label("Username"), 0, 1);
+        form.add(tfUser, 1, 1);
+        form.add(new Label("Nama lengkap"), 0, 2);
+        form.add(tfNama, 1, 2);
+        form.add(new Label("Password (min 4)"), 0, 3);
+        form.add(pfPass, 1, 3);
+        form.add(new Label("Kode petugas"), 0, 4);
+        form.add(pfKode, 1, 4);
+
+        Button btnSimpan = new Button("Simpan");
+        btnSimpan.setDefaultButton(true);
+        Button btnKembali = new Button("Kembali");
+
+        btnSimpan.setOnAction(e -> {
+            String user = tfUser.getText().trim();
+            String nama = tfNama.getText().trim();
+            String pass = pfPass.getText();
+            boolean petugas = "Petugas".equals(cbPeran.getValue());
+
+            if (user.isEmpty() || nama.isEmpty() || pass.isEmpty()) {
+                alert(Alert.AlertType.WARNING, "Data belum lengkap", "Username, nama, dan password wajib diisi.");
+                return;
+            }
+            if (pass.length() < 4) {
+                alert(Alert.AlertType.WARNING, "Password terlalu pendek", "Password minimal 4 karakter.");
+                return;
+            }
+            if (DataStore.cariPengguna(user) != null) {
+                alert(Alert.AlertType.ERROR, "Username dipakai", "Pilih username lain.");
+                return;
+            }
+
+            if (petugas) {
+                if (!DataStore.KODE_PETUGAS.equals(pfKode.getText())) {
+                    alert(Alert.AlertType.ERROR, "Kode salah", "Kode petugas tidak cocok, pendaftaran dibatalkan.");
+                    return;
+                }
+                String id = "PTG-" + String.format("%03d", DataStore.jumlahPetugas() + 1);
+                DataStore.daftarPengguna.add(new Petugas(user, nama, pass, id));
+                alert(Alert.AlertType.INFORMATION, "Berhasil", "Petugas terdaftar dengan ID " + id + ".");
+            } else {
+                DataStore.daftarPengguna.add(new Nasabah(user, nama, pass));
+                alert(Alert.AlertType.INFORMATION, "Berhasil", "Nasabah terdaftar. Silakan login.");
+            }
+            tampilLogin();
+        });
+        btnKembali.setOnAction(e -> tampilLogin());
+
+        HBox tombol = new HBox(10, btnSimpan, btnKembali);
+        tombol.setAlignment(Pos.CENTER);
+
+        VBox root = new VBox(15, judul, form, tombol);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(30));
+        tampil(root, 480, 460);
+    }
+
+    // ================= DASHBOARD NASABAH =================
+
+    private void tampilNasabah(Nasabah n) {
+        Label lblHalo = new Label("Halo, " + n.getNama() + " (Nasabah)");
+        lblHalo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        Label lblSaldo = new Label();
+        lblSaldo.setStyle("-fx-font-size: 16px; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
+        Button btnLogout = new Button("Logout");
+        btnLogout.setOnAction(e -> tampilLogin());
+
+        Region pengisi = new Region();
+        HBox.setHgrow(pengisi, Priority.ALWAYS);
+        HBox atas = new HBox(20, lblHalo, pengisi, lblSaldo, btnLogout);
+        atas.setAlignment(Pos.CENTER_LEFT);
+        atas.setPadding(new Insets(12));
+        atas.setStyle("-fx-background-color: #e8f5e9;");
+
+        TableView<Transaksi> tabel = buatTabelRiwayat();
+
+        Runnable segarkan = () -> {
+            lblSaldo.setText("Saldo: " + DataStore.rupiah(n.getSaldo()));
+            tabel.setItems(FXCollections.observableArrayList(n.getRiwayat()));
+        };
+        segarkan.run();
+
+        Tab tTukar = new Tab("Tukar Saldo", buatPanelTukar(n, segarkan));
+        Tab tRiwayat = new Tab("Riwayat", tabel);
+        Tab tInfo = new Tab("Harga dan Edukasi", buatPanelInfo());
+        Tab tAkun = new Tab("Akun", buatPanelPassword(n));
+
+        TabPane tabs = new TabPane(tTukar, tRiwayat, tInfo, tAkun);
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        BorderPane root = new BorderPane();
+        root.setTop(atas);
+        root.setCenter(tabs);
+        tampil(root, 780, 520);
+    }
+
+    private TableView<Transaksi> buatTabelRiwayat() {
+        TableView<Transaksi> tabel = new TableView<>();
+        tabel.getColumns().add(this.<Transaksi>kolom("Tanggal", t -> t.getTanggal().toString(), 110));
+        tabel.getColumns().add(this.<Transaksi>kolom("Tipe", Transaksi::getTipe, 80));
+        tabel.getColumns().add(this.<Transaksi>kolom("Keterangan", Transaksi::getKeterangan, 200));
+        tabel.getColumns().add(this.<Transaksi>kolom("Berat (kg)",
+                t -> t.getBeratKg() > 0 ? String.format("%.2f", t.getBeratKg()) : "-", 100));
+        tabel.getColumns().add(this.<Transaksi>kolom("Nominal", t -> DataStore.rupiah(t.getNominal()), 140));
+        tabel.setPlaceholder(new Label("Belum ada transaksi."));
+        return tabel;
+    }
+
+    private GridPane buatPanelPassword(Nasabah n) {
+        PasswordField pfLama = new PasswordField();
+        PasswordField pfBaru = new PasswordField();
+        Button btn = new Button("Ganti Password");
+
+        GridPane g = buatForm();
+        g.add(new Label("Password lama"), 0, 0);
+        g.add(pfLama, 1, 0);
+        g.add(new Label("Password baru (min 4)"), 0, 1);
+        g.add(pfBaru, 1, 1);
+        g.add(btn, 1, 2);
+
+        btn.setOnAction(e -> {
+            if (pfLama.getText().isEmpty() || pfBaru.getText().isEmpty()) {
+                alert(Alert.AlertType.WARNING, "Data belum lengkap", "Kedua kolom password wajib diisi.");
+                return;
+            }
+            if (!n.cekPassword(pfLama.getText())) {
+                alert(Alert.AlertType.ERROR, "Password salah", "Password lama tidak cocok.");
+                return;
+            }
+            if (pfBaru.getText().length() < 4) {
+                alert(Alert.AlertType.WARNING, "Terlalu pendek", "Password baru minimal 4 karakter.");
+                return;
+            }
+            n.setPassword(pfBaru.getText());
+            pfLama.clear();
+            pfBaru.clear();
+            alert(Alert.AlertType.INFORMATION, "Berhasil", "Password sudah diganti.");
+        });
+        return g;
+    }
+
+    /*
+     * Panel penukaran dipakai dua role.
+     * Kalau tetap bernilai null (petugas), muncul kolom username nasabah.
+     */
+    private GridPane buatPanelTukar(Nasabah tetap, Runnable sesudah) {
+        TextField tfUser = new TextField();
+        tfUser.setPromptText("Username nasabah");
+
+        ComboBox<String> cbPilihan = new ComboBox<>();
+        cbPilihan.getItems().add("Tarik tunai");
+        for (int i = 0; i < DataStore.namaBarang.length; i++) {
+            cbPilihan.getItems().add(DataStore.namaBarang[i] + " (" + DataStore.rupiah(DataStore.hargaBarang[i]) + ")");
+        }
+        cbPilihan.getSelectionModel().selectFirst();
+
+        TextField tfJumlah = new TextField();
+        tfJumlah.setPromptText("Jumlah penarikan (Rp)");
+        cbPilihan.setOnAction(e ->
+            tfJumlah.setDisable(cbPilihan.getSelectionModel().getSelectedIndex() != 0));
+
+        Button btn = new Button("Proses");
+
+        GridPane g = buatForm();
+        int baris = 0;
+        if (tetap == null) {
+            g.add(new Label("Username nasabah"), 0, baris);
+            g.add(tfUser, 1, baris++);
+        }
+        g.add(new Label("Pilihan"), 0, baris);
+        g.add(cbPilihan, 1, baris++);
+        g.add(new Label("Jumlah"), 0, baris);
+        g.add(tfJumlah, 1, baris++);
+        g.add(btn, 1, baris);
+
+        btn.setOnAction(e -> {
+            Nasabah n = tetap;
+            if (n == null) {
+                String u = tfUser.getText().trim();
+                if (u.isEmpty()) {
+                    alert(Alert.AlertType.WARNING, "Data belum lengkap", "Username nasabah wajib diisi.");
+                    return;
+                }
+                n = DataStore.cariNasabah(u);
+                if (n == null) {
+                    alert(Alert.AlertType.ERROR, "Tidak ditemukan", "Nasabah dengan username itu tidak ada.");
+                    return;
+                }
+            }
+
+            int idx = cbPilihan.getSelectionModel().getSelectedIndex();
+            if (idx == 0) {
+                if (tfJumlah.getText().trim().isEmpty()) {
+                    alert(Alert.AlertType.WARNING, "Data belum lengkap", "Jumlah penarikan wajib diisi.");
+                    return;
+                }
+                Double jumlah = parseAngka(tfJumlah.getText());
+                if (jumlah == null || jumlah <= 0) {
+                    alert(Alert.AlertType.ERROR, "Format salah", "Jumlah harus berupa angka lebih dari nol.");
+                    return;
+                }
+                if (DataStore.tarikTunai(n, jumlah)) {
+                    alert(Alert.AlertType.INFORMATION, "Berhasil",
+                          "Penarikan " + DataStore.rupiah(jumlah) + " berhasil.\nSisa saldo: " + DataStore.rupiah(n.getSaldo()));
+                    tfJumlah.clear();
+                } else {
+                    alert(Alert.AlertType.ERROR, "Saldo tidak cukup", "Saldo saat ini " + DataStore.rupiah(n.getSaldo()) + ".");
+                }
+            } else {
+                int barang = idx - 1;
+                if (DataStore.tukarBarang(n, barang)) {
+                    alert(Alert.AlertType.INFORMATION, "Berhasil",
+                          "Berhasil menukar " + DataStore.namaBarang[barang] + ".\nSisa saldo: " + DataStore.rupiah(n.getSaldo()));
+                } else {
+                    alert(Alert.AlertType.ERROR, "Saldo belum cukup", "Setor sampah dulu untuk menambah saldo.");
+                }
+            }
+            sesudah.run();
+        });
+        return g;
+    }
+
+    // ================= DASHBOARD PETUGAS =================
+
+    private void tampilPetugas(Petugas p) {
+        Label lblHalo = new Label("Halo, " + p.getNama() + " (Petugas " + p.getIdPetugas() + ")");
+        lblHalo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        Button btnLogout = new Button("Logout");
+        btnLogout.setOnAction(e -> tampilLogin());
+
+        Region pengisi = new Region();
+        HBox.setHgrow(pengisi, Priority.ALWAYS);
+        HBox atas = new HBox(20, lblHalo, pengisi, btnLogout);
+        atas.setAlignment(Pos.CENTER_LEFT);
+        atas.setPadding(new Insets(12));
+        atas.setStyle("-fx-background-color: #e3f2fd;");
+
+        TableView<Nasabah> tabelNasabah = buatTabelNasabah();
+        Runnable segarkan = () -> tabelNasabah.setItems(FXCollections.observableArrayList(DataStore.semuaNasabah()));
+        segarkan.run();
+
+        Tab tSetor = new Tab("Catat Setoran", buatPanelSetor(segarkan));
+        Tab tTukar = new Tab("Penukaran Saldo", buatPanelTukar(null, segarkan));
+        Tab tNasabah = new Tab("Daftar Nasabah", tabelNasabah);
+        Tab tRekap = new Tab("Rekapitulasi", buatPanelRekap());
+        Tab tInfo = new Tab("Harga dan Edukasi", buatPanelInfo());
+
+        // daftar nasabah dimuat ulang tiap tab dibuka
+        tNasabah.setOnSelectionChanged(e -> { if (tNasabah.isSelected()) segarkan.run(); });
+
+        TabPane tabs = new TabPane(tSetor, tTukar, tNasabah, tRekap, tInfo);
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        BorderPane root = new BorderPane();
+        root.setTop(atas);
+        root.setCenter(tabs);
+        tampil(root, 820, 540);
+    }
+
+    private TableView<Nasabah> buatTabelNasabah() {
+        TableView<Nasabah> tabel = new TableView<>();
+        tabel.getColumns().add(this.<Nasabah>kolom("Username", Nasabah::getUsername, 180));
+        tabel.getColumns().add(this.<Nasabah>kolom("Nama", Nasabah::getNama, 240));
+        tabel.getColumns().add(this.<Nasabah>kolom("Saldo", n -> DataStore.rupiah(n.getSaldo()), 160));
+        tabel.setPlaceholder(new Label("Belum ada nasabah terdaftar."));
+        return tabel;
+    }
+
+    private GridPane buatPanelSetor(Runnable sesudah) {
+        TextField tfUser = new TextField();
+        tfUser.setPromptText("Username nasabah");
+
+        ComboBox<String> cbJenis = new ComboBox<>();
+        for (Sampah s : DataStore.katalog) {
+            cbJenis.getItems().add(s.getJenis() + " (" + DataStore.rupiah(s.getHargaPerKg()) + "/kg)");
+        }
+        cbJenis.getSelectionModel().selectFirst();
+
+        TextField tfBerat = new TextField();
+        tfBerat.setPromptText("Berat dalam kg, contoh 2.5");
+
+        Label lblHasil = new Label();
+        lblHasil.setStyle("-fx-text-fill: #2e7d32;");
+
+        Button btn = new Button("Catat Setoran");
+
+        GridPane g = buatForm();
+        g.add(new Label("Username nasabah"), 0, 0);
+        g.add(tfUser, 1, 0);
+        g.add(new Label("Jenis sampah"), 0, 1);
+        g.add(cbJenis, 1, 1);
+        g.add(new Label("Berat (kg)"), 0, 2);
+        g.add(tfBerat, 1, 2);
+        g.add(btn, 1, 3);
+        g.add(lblHasil, 1, 4);
+
+        btn.setOnAction(e -> {
+            String u = tfUser.getText().trim();
+            if (u.isEmpty() || tfBerat.getText().trim().isEmpty()) {
+                alert(Alert.AlertType.WARNING, "Data belum lengkap", "Username nasabah dan berat wajib diisi.");
+                return;
+            }
+            Nasabah n = DataStore.cariNasabah(u);
+            if (n == null) {
+                alert(Alert.AlertType.ERROR, "Tidak ditemukan", "Nasabah dengan username itu tidak ada.");
+                return;
+            }
+            Double berat = parseAngka(tfBerat.getText());
+            if (berat == null || berat <= 0) {
+                alert(Alert.AlertType.ERROR, "Format salah", "Berat harus berupa angka lebih dari nol.");
+                return;
+            }
+
+            Sampah s = DataStore.katalog[cbJenis.getSelectionModel().getSelectedIndex()];
+            double nilai = DataStore.setor(n, s, berat);
+
+            lblHasil.setText(String.format("Tercatat: %.2f kg %s = %s", berat, s.getJenis(), DataStore.rupiah(nilai)));
+            alert(Alert.AlertType.INFORMATION, "Setoran tercatat",
+                  String.format("%.2f kg %s dari %s%nNilai: %s%nSaldo sekarang: %s",
+                          berat, s.getJenis(), n.getNama(), DataStore.rupiah(nilai), DataStore.rupiah(n.getSaldo())));
+            tfBerat.clear();
+            sesudah.run();
+        });
+        return g;
+    }
+
+    private VBox buatPanelRekap() {
+        DatePicker dpAwal = new DatePicker();
+        DatePicker dpAkhir = new DatePicker();
+        Button btn = new Button("Tampilkan");
+        Button btnSemua = new Button("Semua Periode");
+
+        TableView<String[]> tabel = new TableView<>();
+        tabel.getColumns().add(this.<String[]>kolom("Jenis", r -> r[0], 180));
+        tabel.getColumns().add(this.<String[]>kolom("Total Berat (kg)", r -> r[1], 180));
+        tabel.getColumns().add(this.<String[]>kolom("Total Nilai", r -> r[2], 200));
+        tabel.setItems(FXCollections.observableArrayList(DataStore.rekap(null, null)));
+
+        btn.setOnAction(e -> {
+            LocalDate awal = dpAwal.getValue();
+            LocalDate akhir = dpAkhir.getValue();
+            if (awal == null || akhir == null) {
+                alert(Alert.AlertType.WARNING, "Tanggal belum lengkap", "Pilih tanggal awal dan akhir, atau tekan Semua Periode.");
+                return;
+            }
+            if (awal.isAfter(akhir)) {
+                alert(Alert.AlertType.ERROR, "Rentang salah", "Tanggal awal tidak boleh setelah tanggal akhir.");
+                return;
+            }
+            tabel.setItems(FXCollections.observableArrayList(DataStore.rekap(awal, akhir)));
+        });
+        btnSemua.setOnAction(e -> {
+            dpAwal.setValue(null);
+            dpAkhir.setValue(null);
+            tabel.setItems(FXCollections.observableArrayList(DataStore.rekap(null, null)));
+        });
+
+        HBox filter = new HBox(10, new Label("Dari"), dpAwal, new Label("Sampai"), dpAkhir, btn, btnSemua);
+        filter.setAlignment(Pos.CENTER_LEFT);
+
+        VBox box = new VBox(12, filter, tabel);
+        box.setPadding(new Insets(15));
+        VBox.setVgrow(tabel, Priority.ALWAYS);
+        return box;
+    }
 }
+
